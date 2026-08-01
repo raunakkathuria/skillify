@@ -1,0 +1,196 @@
+{
+  "nodes": [
+    {
+      "id": "technical-documentation",
+      "label": "Technical Documentation",
+      "category": "documentation",
+      "keywords": [
+        "documentation",
+        "api",
+        "writing",
+        "technical-writing",
+        "readme",
+        "architecture"
+      ],
+      "description": "Write clear technical documentation for APIs, systems, and processes",
+      "path": "documentation/SKILL.md"
+    },
+    {
+      "id": "database-migration",
+      "label": "Database Migration",
+      "category": "infrastructure",
+      "keywords": [
+        "database",
+        "migration",
+        "schema",
+        "sql",
+        "rollback",
+        "deployment"
+      ],
+      "description": "Safe database schema migration process with rollback support",
+      "path": "db-migration/SKILL.md"
+    },
+    {
+      "id": "code-review",
+      "label": "Code Review",
+      "category": "quality",
+      "keywords": [
+        "code-review",
+        "pull-request",
+        "quality",
+        "best-practices",
+        "patterns"
+      ],
+      "description": "Systematic code review process for pull requests",
+      "path": "code-review/SKILL.md"
+    },
+    {
+      "id": "rest-api-design",
+      "label": "REST API Design",
+      "category": "architecture",
+      "keywords": [
+        "api",
+        "rest",
+        "http",
+        "design",
+        "endpoints",
+        "versioning",
+        "documentation"
+      ],
+      "description": "Design RESTful APIs following best practices and conventions",
+      "path": "api-design/SKILL.md"
+    },
+    {
+      "id": "test-strategy",
+      "label": "Test Strategy",
+      "category": "quality",
+      "keywords": [
+        "testing",
+        "unit-tests",
+        "integration",
+        "e2e",
+        "coverage",
+        "quality",
+        "tdd"
+      ],
+      "description": "Comprehensive testing strategy for applications",
+      "path": "testing/SKILL.md"
+    },
+    {
+      "id": "ci-cd-deployment",
+      "label": "CI/CD Deployment",
+      "category": "infrastructure",
+      "keywords": [
+        "deployment",
+        "ci-cd",
+        "pipeline",
+        "automation",
+        "docker",
+        "kubernetes",
+        "rollback"
+      ],
+      "description": "Continuous integration and deployment pipeline setup",
+      "path": "deployment/SKILL.md"
+    },
+    {
+      "id": "security-audit",
+      "label": "Security Audit",
+      "category": "security",
+      "keywords": [
+        "security",
+        "audit",
+        "vulnerabilities",
+        "owasp",
+        "authentication",
+        "encryption"
+      ],
+      "description": "Security review checklist for applications and infrastructure",
+      "path": "security-audit/SKILL.md"
+    },
+    {
+      "id": "performance-optimization",
+      "label": "Performance Optimization",
+      "category": "quality",
+      "keywords": [
+        "performance",
+        "optimization",
+        "caching",
+        "database",
+        "profiling",
+        "monitoring"
+      ],
+      "description": "Identify and resolve performance bottlenecks",
+      "path": "performance/SKILL.md"
+    }
+  ],
+  "edges": [
+    {
+      "source": "technical-documentation",
+      "target": "rest-api-design",
+      "type": "keyword",
+      "weight": 2,
+      "shared": [
+        "api",
+        "documentation"
+      ]
+    },
+    {
+      "source": "database-migration",
+      "target": "ci-cd-deployment",
+      "type": "category",
+      "weight": 1,
+      "shared": [
+        "infrastructure"
+      ]
+    },
+    {
+      "source": "database-migration",
+      "target": "ci-cd-deployment",
+      "type": "keyword",
+      "weight": 2,
+      "shared": [
+        "deployment",
+        "rollback"
+      ]
+    },
+    {
+      "source": "code-review",
+      "target": "test-strategy",
+      "type": "category",
+      "weight": 1,
+      "shared": [
+        "quality"
+      ]
+    },
+    {
+      "source": "code-review",
+      "target": "performance-optimization",
+      "type": "category",
+      "weight": 1,
+      "shared": [
+        "quality"
+      ]
+    },
+    {
+      "source": "test-strategy",
+      "target": "performance-optimization",
+      "type": "category",
+      "weight": 1,
+      "shared": [
+        "quality"
+      ]
+    }
+  ],
+  "metadata": {
+    "total_nodes": 8,
+    "total_edges": 6,
+    "categories": [
+      "architecture",
+      "documentation",
+      "infrastructure",
+      "quality",
+      "security"
+    ],
+    "generated": "2026-08-01T15:34:47.747958+00:00"
+  }
+}

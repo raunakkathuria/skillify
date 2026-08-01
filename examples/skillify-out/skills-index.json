@@ -1,0 +1,152 @@
+{
+  "version": "1.0",
+  "generated": "2026-08-01T15:34:47.747530+00:00",
+  "total_skills": 8,
+  "categories": [
+    "architecture",
+    "documentation",
+    "infrastructure",
+    "quality",
+    "security"
+  ],
+  "skills": [
+    {
+      "id": "technical-documentation",
+      "name": "Technical Documentation",
+      "description": "Write clear technical documentation for APIs, systems, and processes",
+      "keywords": [
+        "documentation",
+        "api",
+        "writing",
+        "technical-writing",
+        "readme",
+        "architecture"
+      ],
+      "category": "documentation",
+      "path": "documentation/SKILL.md",
+      "version": "1.0",
+      "author": "docs-team"
+    },
+    {
+      "id": "database-migration",
+      "name": "Database Migration",
+      "description": "Safe database schema migration process with rollback support",
+      "keywords": [
+        "database",
+        "migration",
+        "schema",
+        "sql",
+        "rollback",
+        "deployment"
+      ],
+      "category": "infrastructure",
+      "path": "db-migration/SKILL.md",
+      "version": "2.0",
+      "author": "dba-team"
+    },
+    {
+      "id": "code-review",
+      "name": "Code Review",
+      "description": "Systematic code review process for pull requests",
+      "keywords": [
+        "code-review",
+        "pull-request",
+        "quality",
+        "best-practices",
+        "patterns"
+      ],
+      "category": "quality",
+      "path": "code-review/SKILL.md",
+      "version": "1.0",
+      "author": "team-lead"
+    },
+    {
+      "id": "rest-api-design",
+      "name": "REST API Design",
+      "description": "Design RESTful APIs following best practices and conventions",
+      "keywords": [
+        "api",
+        "rest",
+        "http",
+        "design",
+        "endpoints",
+        "versioning",
+        "documentation"
+      ],
+      "category": "architecture",
+      "path": "api-design/SKILL.md",
+      "version": "1.5",
+      "author": "api-guild"
+    },
+    {
+      "id": "test-strategy",
+      "name": "Test Strategy",
+      "description": "Comprehensive testing strategy for applications",
+      "keywords": [
+        "testing",
+        "unit-tests",
+        "integration",
+        "e2e",
+        "coverage",
+        "quality",
+        "tdd"
+      ],
+      "category": "quality",
+      "path": "testing/SKILL.md",
+      "version": "1.0",
+      "author": "qa-team"
+    },
+    {
+      "id": "ci-cd-deployment",
+      "name": "CI/CD Deployment",
+      "description": "Continuous integration and deployment pipeline setup",
+      "keywords": [
+        "deployment",
+        "ci-cd",
+        "pipeline",
+        "automation",
+        "docker",
+        "kubernetes",
+        "rollback"
+      ],
+      "category": "infrastructure",
+      "path": "deployment/SKILL.md",
+      "version": "3.0",
+      "author": "devops-team"
+    },
+    {
+      "id": "security-audit",
+      "name": "Security Audit",
+      "description": "Security review checklist for applications and infrastructure",
+      "keywords": [
+        "security",
+        "audit",
+        "vulnerabilities",
+        "owasp",
+        "authentication",
+        "encryption"
+      ],
+      "category": "security",
+      "path": "security-audit/SKILL.md",
+      "version": "2.0",
+      "author": "security-team"
+    },
+    {
+      "id": "performance-optimization",
+      "name": "Performance Optimization",
+      "description": "Identify and resolve performance bottlenecks",
+      "keywords": [
+        "performance",
+        "optimization",
+        "caching",
+        "database",
+        "profiling",
+        "monitoring"
+      ],
+      "category": "quality",
+      "path": "performance/SKILL.md",
+      "version": "1.0",
+      "author": "platform-team"
+    }
+  ]
+}

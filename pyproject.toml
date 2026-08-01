@@ -1,0 +1,18 @@
+[project]
+name = "skillify"
+version = "0.1.0"
+description = "Scan AI skill folders and generate structured indexes with interactive visual graphs"
+requires-python = ">=3.10"
+dependencies = [
+    "click",
+    "pyyaml",
+    "requests",
+    "rich",
+]
+
+[project.scripts]
+skillify = "skillify.cli:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
