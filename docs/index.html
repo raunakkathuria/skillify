@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skillify — A table of contents for your AI skills</title>
+  <meta name="description" content="Scan your skills folder. Get a searchable index, knowledge graph, and analytics report. Agents find the right skill instantly.">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    :root {
+      --bg: #0a0c0f;
+      --surface: #111417;
+      --surface-2: #161b22;
+      --border: #1e2329;
+      --border-2: #2a2f38;
+      --text: #e8eaf0;
+      --text-muted: #c2c8d2;
+      --text-subtle: #a7aebd;
+      --muted: #606876;
+      --primary: #00e5b4;
+      --primary-hover: #5eead4;
+      --primary-strong: #2dd4bf;
+      --primary-tint: rgba(0, 229, 180, 0.08);
+      --primary-border: rgba(0, 229, 180, 0.22);
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --font-mono: 'SFMono-Regular', 'Roboto Mono', Consolas, 'Liberation Mono', monospace;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --radius-xl: 1rem;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 4vw, 2rem);
+    }
+
+    /* Nav */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(17, 20, 23, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .nav-brand {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.925rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    /* Sections */
+    section {
+      padding: 5rem 0;
+    }
+
+    section:nth-child(odd) {
+      background: var(--bg);
+    }
+
+    section:nth-child(even) {
+      background: var(--surface);
+    }
+
+    .section-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 7rem 0 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 900px;
+      background: radial-gradient(circle, rgba(0, 229, 180, 0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-headline {
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      position: relative;
+    }
+
+    .hero-subtitle {
+      color: var(--text-muted);
+      font-size: 1.125rem;
+      max-width: 600px;
+      margin: 0 auto 2rem;
+      line-height: 1.7;
+      position: relative;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      background: var(--primary);
+      color: var(--bg);
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      transition: background 0.2s;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      display: inline-block;
+      background: transparent;
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      border: 1px solid var(--primary-border);
+      transition: background 0.2s;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .btn-secondary:hover {
+      background: var(--primary-tint);
+    }
+
+    .hero-comparison {
+      margin-top: 3rem;
+      position: relative;
+    }
+
+    .code-block {
+      font-family: var(--font-mono);
+      background: var(--surface-2);
+      border-left: 3px solid var(--primary);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .hero-comparison .code-block {
+      display: inline-block;
+      max-width: 100%;
+      font-variant-ligatures: none;
+      letter-spacing: 0;
+      tab-size: 4;
+    }
+
+    /* Features */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 900px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--primary-border);
+      box-shadow: 0 4px 24px var(--primary-tint);
+    }
+
+    .feature-card-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .feature-card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    /* How it works */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      text-align: center;
+    }
+
+    @media (max-width: 700px) {
+      .steps {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+      }
+    }
+
+    .step-number {
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+      margin-bottom: 0.75rem;
+    }
+
+    .step-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-desc {
+      color: var(--text-muted);
+      font-size: 0.925rem;
+    }
+
+    /* Install */
+    .install-section .code-block {
+      max-width: 600px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .install-section .install-alt {
+      text-align: center;
+      color: var(--text-subtle);
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Output */
+    .output-section .code-block {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Footer */
+    .footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 2rem 0;
+    }
+
+    .footer .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-left {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .footer-right {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    .footer-right a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .footer-right a:hover {
+      color: var(--primary);
+    }
+
+    .footer-right span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 600px) {
+      .hero {
+        padding: 5rem 0 3rem;
+      }
+
+      .section-title {
+        font-size: 1.6rem;
+      }
+
+      section {
+        padding: 3.5rem 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="container">
+      <a href="#" class="nav-brand">Skillify</a>
+      <ul class="nav-links">
+        <li><a href="https://github.com/raunakkathuria/skillify" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="#install">Install</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <h1 class="hero-headline">A table of contents for your AI skills</h1>
+      <p class="hero-subtitle">Scan your skills folder. Get a searchable index, knowledge graph, and analytics report. Agents find the right skill instantly — not by reading everything.</p>
+      <div class="hero-buttons">
+        <a href="#install" class="btn-primary">Get Started</a>
+        <a href="https://github.com/raunakkathuria/skillify" target="_blank" rel="noopener" class="btn-secondary">View on GitHub</a>
+      </div>
+      <div class="hero-comparison">
+        <pre class="code-block">Without Skillify:            With Skillify:
+
+ ┌───────────────────┐       ┌───────────────────────┐
+ │ Load ALL skills   │       │ Load the INDEX only   │
+ │ into context      │       │ (names + keywords)    │
+ │                   │       │         |             │
+ │ (bloated prompt,  │       │ Search: "deployment"  │
+ │  slow, expensive) │       │         |             │
+ │                   │       │ Load ONLY the match   │
+ └───────────────────┘       └───────────────────────┘</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Visual Graph -->
+  <section>
+    <div class="container">
+      <h2 class="section-title">Visual Representation</h2>
+      <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Keywords from your index pointing to skills — like a book's table of contents pointing to chapters.</p>
+      <div style="text-align: center; overflow-x: auto;">
+        <img src="https://raw.githubusercontent.com/raunakkathuria/skillify/main/examples/skillify-out/graph.svg" alt="Skillify index visualization — keywords pointing to skills" style="max-width: 100%; height: auto; border-radius: var(--radius-lg); border: 1px solid var(--border);">
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section>
+    <div class="container">
+      <h2 class="section-title">Features</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-card-icon">📖</div>
+          <div class="feature-card-title">Smart Index</div>
+          <p class="feature-card-desc">Generates skills-index.json — a lightweight table of contents AI agents load instead of all your skill files</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-icon">🔍</div>
+          <div class="feature-card-title">Instant Search</div>
+          <p class="feature-card-desc">Search by keyword from CLI or programmatically. Find the right skill in milliseconds.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-icon">🎨</div>
+          <div class="feature-card-title">Visual Graph</div>
+          <p class="feature-card-desc">Interactive HTML knowledge graph + animated SVG showing how skills connect</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-icon">🔄</div>
+          <div class="feature-card-title">CI/CD Ready</div>
+          <p class="feature-card-desc">--check exits 1 when stale, --diff shows changes, --json-output for automation</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-icon">🔌</div>
+          <div class="feature-card-title">One-Command Setup</div>
+          <p class="feature-card-desc">skillify install claude/codex/cursor/kiro — wires into your AI tool automatically</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-icon">📊</div>
+          <div class="feature-card-title">Analytics Report</div>
+          <p class="feature-card-desc">Clusters, hubs, keyword frequency, isolated skills — understand your skill landscape</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section>
+    <div class="container">
+      <h2 class="section-title">How It Works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-title">Scan</div>
+          <p class="step-desc">Point skillify at your skills folder or GitHub repo</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-title">Index</div>
+          <p class="step-desc">Get a structured JSON index + knowledge graph + report</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-title">Load</div>
+          <p class="step-desc">Agents search the index and load only matching skills on demand</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Install -->
+  <section id="install" class="install-section">
+    <div class="container">
+      <h2 class="section-title">Get Started</h2>
+      <pre class="code-block">pip install skillify
+skillify scan ./my-skills/
+skillify install claude</pre>
+      <p class="install-alt">Or install from source:</p>
+      <pre class="code-block">git clone https://github.com/raunakkathuria/skillify.git
+cd skillify &amp;&amp; pip install .</pre>
+    </div>
+  </section>
+
+  <!-- Output -->
+  <section class="output-section">
+    <div class="container">
+      <h2 class="section-title">What You Get</h2>
+      <pre class="code-block">skillify-out/
+├── graph.html          ← interactive visualization
+├── graph.svg           ← animated SVG for docs
+├── graph.json          ← raw graph data
+├── skills-index.json   ← THE INDEX (what agents consume)
+├── SKILLS_INDEX.md     ← human-readable table of contents
+└── SKILLIFY_REPORT.md  ← analytics report</pre>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-left">Built by Raunak Kathuria</div>
+      <div class="footer-right">
+        <a href="https://github.com/raunakkathuria/skillify" target="_blank" rel="noopener">GitHub</a>
+        <span>MIT License</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
