@@ -9,7 +9,6 @@ import json
 import os
 from datetime import datetime, timezone
 from itertools import combinations
-from typing import Any
 
 
 def build_graph(skills: list[dict]) -> dict:
