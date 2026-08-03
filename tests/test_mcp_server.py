@@ -7,6 +7,7 @@ import pytest
 
 from skillify.mcp_server import (
     DEFAULT_PROTOCOL_VERSION,
+    MAX_SKILL_BYTES,
     SkillServer,
     ToolError,
     serve,
@@ -132,6 +133,20 @@ def test_load_returns_content_and_directory(library):
     assert "rollback" in payload["content"]
     assert payload["directory"].endswith("db-migration")
     assert not payload["truncated"]
+
+
+def test_oversized_skill_is_truncated_and_says_so(library):
+    """Silent mid-instruction truncation would produce a confusing agent failure."""
+    padding = "\n".join(f"filler line {i}" for i in range(20_000))
+    (library / "db-migration" / "SKILL.md").write_text(
+        "---\nname: Database Migration\ndescription: Huge\n---\n\n" + padding
+    )
+
+    _, text = call(library, "load_skill", {"skill_id": "database-migration"})
+    payload = json.loads(text)
+
+    assert payload["truncated"] is True
+    assert len(payload["content"]) == MAX_SKILL_BYTES
 
 
 def test_load_unknown_id_is_a_tool_error(library):

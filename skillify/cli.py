@@ -299,7 +299,12 @@ def install(platform, index, root, project):
 
 def _install_mcp(index, root, project, install_mcp_server):
     """Register the MCP server, then recommend how to tier the library."""
-    from .tiering import DEMOTED_TIER, TIERING_WORTHWHILE_AT, recommend_tiers
+    from .tiering import (
+        DEMOTED_TIER,
+        TIERING_WORTHWHILE_AT,
+        in_native_listing,
+        recommend_tiers,
+    )
 
     root = root or _root_from_index(index)
     if not root:
@@ -324,6 +329,16 @@ def _install_mcp(index, root, project, install_mcp_server):
     skills = scan_directory(root)
     if not skills:
         click.echo(f"⚠️  No skills found in {root}.")
+        return
+
+    # skillOverrides is keyed by the names Claude Code discovers. A library kept
+    # outside its skill directories is not in the listing at all, so there is
+    # nothing to demote and an overrides block would apply to nothing.
+    if not in_native_listing(root, project):
+        click.echo(f"   {len(skills)} skills, and none of them are in Claude Code's")
+        click.echo("   native listing — this library sits outside .claude/skills/ and")
+        click.echo("   ~/.claude/skills/. That is the setup you want: they cost nothing")
+        click.echo("   until search_skills finds them, so there is nothing to demote.")
         return
 
     if len(skills) < TIERING_WORTHWHILE_AT:

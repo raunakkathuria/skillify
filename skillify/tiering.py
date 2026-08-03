@@ -21,6 +21,7 @@ slash command still works.
 """
 
 import math
+import os
 
 from .graph_builder import build_graph
 from .reporter import connection_counts
@@ -36,6 +37,43 @@ DEMOTED_TIER = "user-invocable-only"
 # Below this, the whole listing fits comfortably and tiering costs more attention
 # than it saves. Anthropic puts tool-selection degradation at 30-50 options.
 TIERING_WORTHWHILE_AT = 30
+
+
+def native_skill_dirs(project_dir: str = ".") -> list[str]:
+    """The directories Claude Code scans for skills.
+
+    Args:
+        project_dir: Project root, for the project-scoped skills directory.
+
+    Returns:
+        Absolute paths, which may not exist.
+    """
+    return [
+        os.path.realpath(os.path.join(project_dir, ".claude", "skills")),
+        os.path.realpath(os.path.expanduser("~/.claude/skills")),
+    ]
+
+
+def in_native_listing(root: str, project_dir: str = ".") -> bool:
+    """Whether skills under `root` are ones Claude Code lists natively.
+
+    This decides whether a `skillOverrides` recommendation means anything.
+    Overrides are keyed by the names Claude Code discovers, so a library kept
+    outside its skill directories has nothing in the listing to demote — there,
+    the MCP server is already the only path to those skills.
+
+    Args:
+        root: Directory being served.
+        project_dir: Project root, for the project-scoped skills directory.
+
+    Returns:
+        True if `root` is one of Claude Code's skill directories or sits inside one.
+    """
+    root = os.path.realpath(root)
+    return any(
+        root == directory or root.startswith(directory + os.sep)
+        for directory in native_skill_dirs(project_dir)
+    )
 
 
 def recommend_tiers(skills: list[dict]) -> dict:

@@ -4,7 +4,7 @@ import json
 
 from skillify.integrations import install_mcp_server
 from skillify.scanner import scan_directory
-from skillify.tiering import DEMOTED_TIER, recommend_tiers
+from skillify.tiering import DEMOTED_TIER, in_native_listing, recommend_tiers
 
 from conftest import write_skill
 
@@ -78,6 +78,24 @@ def test_empty_library_is_handled(tmp_path):
     tiers = recommend_tiers([])
 
     assert tiers == {"always_on": [], "demoted": [], "overrides": {}, "duplicate_names": []}
+
+
+def test_library_outside_claude_dirs_is_not_natively_listed(tmp_path):
+    """A library Claude Code never scans has nothing in the listing to demote.
+
+    Recommending skillOverrides for it would print a block that applies to
+    nothing, with no signal to the user that it is inert.
+    """
+    assert not in_native_listing(str(tmp_path / "skills-library"), project_dir=str(tmp_path))
+
+
+def test_project_skills_dir_is_natively_listed(tmp_path):
+    """Skills under .claude/skills/ are exactly the ones overrides can address."""
+    skills_dir = tmp_path / ".claude" / "skills"
+    skills_dir.mkdir(parents=True)
+
+    assert in_native_listing(str(skills_dir), project_dir=str(tmp_path))
+    assert in_native_listing(str(skills_dir / "nested"), project_dir=str(tmp_path))
 
 
 def test_install_merges_into_existing_mcp_config(tmp_path, library):
