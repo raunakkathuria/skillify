@@ -240,6 +240,22 @@ def find_clusters(graph_data: dict) -> list[dict]:
     return clusters
 
 
+def connection_counts(graph_data: dict) -> dict[str, int]:
+    """Count how many edges touch each node.
+
+    Args:
+        graph_data: Graph dict with an 'edges' key.
+
+    Returns:
+        Mapping of node id to edge count. Nodes with no edges are absent.
+    """
+    counts: dict[str, int] = defaultdict(int)
+    for edge in graph_data.get("edges", []):
+        counts[edge["source"]] += 1
+        counts[edge["target"]] += 1
+    return counts
+
+
 def find_hubs(graph_data: dict) -> list[dict]:
     """Find nodes with the most connections (hub nodes).
 
@@ -260,16 +276,12 @@ def find_hubs(graph_data: dict) -> list[dict]:
     edges = graph_data.get("edges", [])
 
     node_map: dict[str, dict] = {n["id"]: n for n in nodes}
-    connection_count: dict[str, int] = defaultdict(int)
+    connection_count = connection_counts(graph_data)
     connected_nodes: dict[str, set[str]] = defaultdict(set)
 
     for edge in edges:
-        source = edge["source"]
-        target = edge["target"]
-        connection_count[source] += 1
-        connection_count[target] += 1
-        connected_nodes[source].add(target)
-        connected_nodes[target].add(source)
+        connected_nodes[edge["source"]].add(edge["target"])
+        connected_nodes[edge["target"]].add(edge["source"])
 
     if not connection_count:
         return []

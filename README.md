@@ -91,6 +91,14 @@ skillify search "testing" --index path/to/skills-index.json
 skillify search "api" --limit 5
 ```
 
+### Run as an MCP server
+
+```bash
+skillify mcp ./skills/
+```
+
+Speaks JSON-RPC on stdin/stdout, so it is launched by the agent runtime rather than run by hand. See [MCP server mode](#mcp-server-mode).
+
 ### Terminal visualization
 
 ```bash
@@ -112,12 +120,13 @@ python -m skillify search "deployment"
 
 ### `skills-index.json` — The Index
 
-The core output. A structured JSON file that AI agents can load to discover skills without reading every file:
+A structured index of the library. `root` records the directory that was scanned, since each skill's `path` is relative to it:
 
 ```json
 {
   "version": "1.0",
   "generated": "2026-08-01T08:55:28Z",
+  "root": "/home/you/skills",
   "total_skills": 8,
   "categories": ["infrastructure", "quality", "security"],
   "skills": [
@@ -235,28 +244,107 @@ Instead of loading all skill files into context:
 4. **Discard when done** — keep the context window lean
 
 ```python
-# Example: AI agent skill loading
 import json
+import os
+
+from skillify.indexer import search_skills
 
 with open("skillify-out/skills-index.json") as f:
     index = json.load(f)
 
-# Search for relevant skills
-query = "database migration"
-matches = [s for s in index["skills"] 
-           if query in s["description"].lower() 
-           or any(query in kw for kw in s["keywords"])]
+# Ranked by weighted token overlap, so a full-sentence query works
+matches = search_skills(index["skills"], "how do I safely change the database schema")
 
 # Load only what's needed
-for skill in matches:
-    with open(skill["path"]) as f:
+for skill in matches[:1]:
+    with open(os.path.join(index["root"], skill["path"])) as f:
         instructions = f.read()
     # → inject into agent context
 ```
 
+Reaching for the index directly is the fallback. If your agent speaks MCP, run `skillify mcp` and let it call `search_skills` itself.
+
+## MCP server mode
+
+The instruction-file integrations below ask the agent to read `skills-index.json` before starting work. That only helps when the agent actually does it, and the instruction is competing for attention with everything else in the prompt.
+
+MCP server mode puts discovery in the agent loop instead. Skillify runs as an MCP server with two tools:
+
+- `search_skills(query)` — rank the library against a task description, return matching skill ids
+- `load_skill(skill_id)` — return that skill's full instructions, plus its directory so the agent can read any scripts it mentions
+
+Both appear in the agent's tool list, so it can search mid-task without being told to.
+
+```bash
+# Register in the current project's .mcp.json
+skillify install mcp --root ./skills
+
+# Or wire it up directly
+claude mcp add skillify -- skillify mcp ./skills
+```
+
+The server scans the directory when it starts, so there is no index file to keep fresh and nothing to run first.
+
+Queries can be full sentences. `search_skills("how do I safely change the database schema")` matches a skill called "Database Migration". The two share no exact phrase, which is how an agent will actually ask.
+
+### Registering the server does not shrink your context
+
+Claude Code lists every skill it finds in `~/.claude/skills/` and `.claude/skills/`. Adding an MCP server does not stop that listing. You now have two ways to find the same skills, and your context goes up, not down.
+
+That listing has a budget. Go over it and Claude Code warns you:
+
+```
+Skill listing over budget: 63 skills, 18420 chars > 16384 budget — descriptions
+will be truncated. Run /skills to disable some, or raise
+skillListingBudgetFraction in settings.
+```
+
+Truncated descriptions are worse than they sound. The model can still see a skill exists but no longer knows what it does, so it cannot pick sensibly between 63 near-identical names.
+
+Claude Code tells you to disable some skills. It does not tell you which. That is the decision skillify can make for you, because it already builds a relationship graph of your library.
+
+`skillOverrides` in `settings.json` is the switch:
+
+| Value | Effect |
+|-------|--------|
+| `name-only` | Lists the skill, drops its description |
+| `user-invocable-only` | Hidden from the model, `/name` still works for you |
+| `off` | Hidden from both |
+
+`skillify install mcp` reads your graph and recommends a split — broadly-connected skills stay in the listing, the long tail moves to `user-invocable-only`:
+
+```
+   Keep always-on (12):
+     • Code Review — 14 connections — shares vocabulary with much of the library
+     ...
+
+   Move behind search (51):
+     • Shard Rebalancing — isolated — nothing else shares its keywords or category
+     ...
+
+   Add to .claude/settings.json (merges across settings scopes):
+
+   {
+     "skillOverrides": {
+       "Shard Rebalancing": "user-invocable-only",
+       ...
+     }
+   }
+```
+
+`user-invocable-only` rather than `off` because it costs you nothing: the slash command still works, and skillify still finds the skill through `search_skills`. Nothing is written to `settings.json`. It changes what the model can see, so applying it is your call.
+
+Below about 30 skills the native listing handles things fine, and `skillify install mcp` will say so rather than recommend a split.
+
+You do not need to move any files. Demoting a skill is a settings change, and it is reversible.
+
+### One behaviour difference
+
+A skill loaded through `load_skill` arrives as text. Claude Code's own Skill tool honours the capability fields in frontmatter (`allowed-tools`, `hooks`, `model`) and runs inline `!` shell commands. Loading the same skill over MCP does neither. The instructions come through; the enforcement does not.
+
 ## Integration with AI Tools
 
-One command to wire skillify into your AI assistant:
+For tools without MCP support, skillify can write an instruction file instead:
 
 ```bash
 skillify install claude      # creates .claude/skills/skillify/SKILL.md
@@ -266,7 +354,7 @@ skillify install opencode    # appends to AGENTS.md
 skillify install kiro        # creates .kiro/skills/skillify/SKILL.md
 ```
 
-This creates the appropriate config file for your platform, telling the AI to consult the index before starting tasks.
+This creates the appropriate config file for your platform, telling the AI to consult the index before starting tasks. Prefer `skillify install mcp` where you can — an instruction file is a request, a tool is not.
 
 ```bash
 # Custom index path

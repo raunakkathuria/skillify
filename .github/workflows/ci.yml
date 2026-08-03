@@ -21,10 +21,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install skillify
-        run: pip install .
+        run: pip install '.[dev]'
 
       - name: Verify CLI loads
         run: skillify --version
+
+      - name: Run unit tests
+        run: pytest -q
 
       - name: Run scan on sample skills
         run: skillify scan examples/sample-skills/ -o /tmp/skillify-test --no-svg
@@ -45,3 +48,40 @@ jobs:
 
       - name: Test --json-output
         run: skillify scan examples/sample-skills/ -o /tmp/skillify-test --json-output --no-html --no-svg
+
+      - name: Test MCP server over stdio
+        run: |
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+            '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_skills","arguments":{"query":"how do I safely change the database schema"}}}' \
+            '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"load_skill","arguments":{"skill_id":"database-migration"}}}' \
+            | skillify mcp examples/sample-skills/ > /tmp/mcp-out.jsonl
+          python -c "
+          import json
+          # Every stdout line must be pure JSON — stray output breaks the transport.
+          lines = [json.loads(l) for l in open('/tmp/mcp-out.jsonl')]
+          # One response per request, none for the notification.
+          assert len(lines) == 4, f'expected 4 responses, got {len(lines)}'
+          by_id = {m['id']: m for m in lines}
+          tools = {t['name'] for t in by_id[2]['result']['tools']}
+          assert tools == {'search_skills', 'load_skill'}, tools
+          # The natural-language query must rank the right skill first.
+          search = json.loads(by_id[3]['result']['content'][0]['text'])
+          assert search['results'][0]['skill_id'] == 'database-migration', search
+          loaded = json.loads(by_id[4]['result']['content'][0]['text'])
+          assert loaded['directory'].endswith('db-migration'), loaded['directory']
+          assert 'rollback' in loaded['content']
+          print('MCP server OK')
+          "
+
+      - name: Test install mcp
+        run: |
+          skillify install mcp --root examples/sample-skills --project /tmp/mcp-proj
+          python -c "
+          import json
+          cfg = json.load(open('/tmp/mcp-proj/.mcp.json'))
+          assert cfg['mcpServers']['skillify']['args'][0] == 'mcp', cfg
+          print('install mcp OK')
+          "

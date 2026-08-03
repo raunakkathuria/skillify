@@ -55,6 +55,27 @@ def slugify(text: str) -> str:
     return text
 
 
+_TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+
+def tokenize(text: str) -> list[str]:
+    """Split text into lowercased content tokens.
+
+    Drops stopwords and tokens shorter than 3 characters. Shared by keyword
+    extraction and search scoring so both agree on what counts as a term.
+
+    Args:
+        text: The text to tokenize.
+
+    Returns:
+        A list of tokens, in order of appearance.
+    """
+    return [
+        w for w in _TOKEN_RE.findall(text.lower())
+        if len(w) >= 3 and w not in STOPWORDS
+    ]
+
+
 def extract_keywords_from_content(content: str, max_keywords: int = 10) -> list[str]:
     """Extract keywords from text content using simple term frequency.
 
@@ -72,12 +93,7 @@ def extract_keywords_from_content(content: str, max_keywords: int = 10) -> list[
     text = re.sub(r"[#*`\[\](){}|>~_=+]", " ", content)
     # Remove URLs
     text = re.sub(r"https?://\S+", "", text)
-    # Split into words, lowercase, keep only alphabetic tokens
-    words = re.findall(r"[a-zA-Z]+", text.lower())
-    # Filter stopwords and short words (less than 3 chars)
-    filtered = [w for w in words if w not in STOPWORDS and len(w) >= 3]
-    # Count frequency
-    counter = Counter(filtered)
+    counter = Counter(tokenize(text))
     # Return top N keywords
     return [word for word, _ in counter.most_common(max_keywords)]
 
@@ -177,6 +193,43 @@ def extract_skill_metadata(filepath: str) -> dict:
     return metadata
 
 
+def assign_unique_ids(skills: list[dict]) -> list[dict]:
+    """Give every skill a unique, deterministic id, in place.
+
+    ``extract_skill_metadata`` derives ``id`` from the skill name alone, so two
+    skills named the same thing collide. ``id`` is the primary key callers use
+    to load a skill, so a collision would silently return the wrong file.
+
+    Skills are sorted by path before assignment — names are what collide, so
+    sorting by name would leave the winner up to filesystem walk order and make
+    ids differ between machines.
+
+    Args:
+        skills: Skill metadata dicts, each with 'id' and 'path'. Mutated in place.
+
+    Returns:
+        The same list, sorted by path, with unique ids.
+    """
+    skills.sort(key=lambda s: s["path"])
+    used: set[str] = set()
+
+    for skill in skills:
+        base = skill.get("id") or "skill"
+        candidate = base
+        if candidate in used:
+            # Disambiguate with the containing directory, then a counter.
+            parent = slugify(os.path.basename(os.path.dirname(skill["path"])))
+            candidate = f"{base}-{parent}" if parent else base
+            suffix = 2
+            while candidate in used:
+                candidate = f"{base}-{suffix}"
+                suffix += 1
+        used.add(candidate)
+        skill["id"] = candidate
+
+    return skills
+
+
 def scan_directory(path: str, patterns: list[str] | None = None) -> list[dict]:
     """Recursively scan a directory for skill files and extract metadata.
 
@@ -190,7 +243,8 @@ def scan_directory(path: str, patterns: list[str] | None = None) -> list[dict]:
                   Defaults to ['SKILL.md', '*.md'].
 
     Returns:
-        A list of metadata dictionaries, one per matched skill file.
+        A list of metadata dictionaries with unique ids, sorted by path.
+        Each 'path' is relative to the scan root.
     """
     if patterns is None:
         patterns = ["SKILL.md", "*.md"]
@@ -227,4 +281,4 @@ def scan_directory(path: str, patterns: list[str] | None = None) -> list[dict]:
                 metadata["path"] = os.path.relpath(abs_filepath, root_path)
                 results.append(metadata)
 
-    return results
+    return assign_unique_ids(results)

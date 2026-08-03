@@ -10,10 +10,11 @@ It also provides search functionality over the generated index.
 import json
 import os
 from datetime import datetime, timezone
-from typing import Any
+
+from .scanner import tokenize
 
 
-def generate_index(skills: list[dict], output_dir: str) -> None:
+def generate_index(skills: list[dict], output_dir: str, root: str = "") -> None:
     """Generate a skills index in both JSON and Markdown formats.
 
     Creates output_dir if it doesn't exist, then writes:
@@ -24,6 +25,8 @@ def generate_index(skills: list[dict], output_dir: str) -> None:
         skills: List of skill metadata dicts. Each should contain at minimum:
             id, name, description, keywords, category, path, version, author.
         output_dir: Directory path where index files will be written.
+        root: The scanned root directory. Recorded in the JSON so consumers can
+            resolve the relative 'path' of each skill.
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -47,6 +50,7 @@ def generate_index(skills: list[dict], output_dir: str) -> None:
     index_data = {
         "version": "1.0",
         "generated": now,
+        "root": os.path.abspath(root) if root else "",
         "total_skills": len(skills),
         "categories": categories,
         "skills": index_skills,
@@ -122,80 +126,99 @@ def _build_markdown_index(skills: list[dict], categories: list[str], date_str: s
     return "\n".join(lines)
 
 
-def search_index(index_path: str, query: str) -> list[dict]:
-    """Search the skills index for skills matching a query.
+# Per-field weight applied to each matching query token. A skill whose *name*
+# matches the query is a far stronger signal than one that merely mentions the
+# word somewhere in its description.
+_FIELD_WEIGHTS: dict[str, int] = {
+    "name": 5,
+    "keywords": 3,
+    "category": 2,
+    "description": 1,
+}
 
-    Loads the skills-index.json file and searches against name, description,
-    keywords, and category fields. Results are sorted by relevance, where
-    relevance is measured by the number of fields that match the query.
+
+def search_skills(skills: list[dict], query: str, limit: int = 10) -> list[dict]:
+    """Rank skills against a query by weighted token overlap.
+
+    Scoring is deliberately simple: tokenize the query, then for each field add
+    the field's weight once per distinct query token it contains, plus a bonus
+    when the whole query appears verbatim. No IDF, no corpus statistics.
+
+    Tokenized matching is what lets a sentence-shaped query work. A literal
+    substring match of the full query string finds nothing for anything an agent
+    would realistically ask, since it only matches when the whole phrase appears
+    verbatim in a single field.
+
+    Args:
+        skills: Skill metadata dicts to rank.
+        query: Search query. Case-insensitive.
+        limit: Maximum number of results to return.
+
+    Returns:
+        Matching skills sorted by relevance (most relevant first), truncated to
+        `limit`. Each result is a copy with a '_relevance' score added.
+    """
+    phrase = query.lower().strip()
+    query_tokens = set(tokenize(query))
+
+    if not phrase:
+        return []
+
+    results: list[dict] = []
+    for skill in skills:
+        relevance = _calculate_relevance(skill, query_tokens, phrase)
+        if relevance > 0:
+            results.append({**skill, "_relevance": relevance})
+
+    # Name as tiebreaker keeps ordering stable for equally-scored skills.
+    results.sort(key=lambda s: (-s["_relevance"], s.get("name", "").lower()))
+    return results[:limit]
+
+
+def search_index(index_path: str, query: str, limit: int = 10) -> list[dict]:
+    """Search a skills-index.json file. Thin wrapper over `search_skills`.
 
     Args:
         index_path: Path to the skills-index.json file.
-        query: Search query string. Case-insensitive matching is used.
+        query: Search query string.
+        limit: Maximum number of results to return.
 
     Returns:
-        List of matching skill dicts sorted by relevance (most relevant first).
-        Each dict includes all skill fields plus a '_relevance' score.
+        List of matching skill dicts sorted by relevance.
     """
     with open(index_path, "r", encoding="utf-8") as f:
         index_data = json.load(f)
 
-    skills = index_data.get("skills", [])
-    query_lower = query.lower().strip()
-
-    if not query_lower:
-        return []
-
-    results: list[dict] = []
-
-    for skill in skills:
-        relevance = _calculate_relevance(skill, query_lower)
-        if relevance > 0:
-            result = dict(skill)
-            result["_relevance"] = relevance
-            results.append(result)
-
-    # Sort by relevance descending
-    results.sort(key=lambda x: x["_relevance"], reverse=True)
-
-    return results
+    return search_skills(index_data.get("skills", []), query, limit)
 
 
-def _calculate_relevance(skill: dict, query_lower: str) -> int:
-    """Calculate a relevance score for a skill against a query.
-
-    Checks name, description, keywords, and category fields for matches.
-    Each matching field adds 1 to the score.
+def _calculate_relevance(skill: dict, query_tokens: set[str], phrase: str) -> int:
+    """Score one skill against a tokenized query.
 
     Args:
         skill: Skill metadata dict.
-        query_lower: Lowercased query string.
+        query_tokens: Distinct content tokens from the query.
+        phrase: The full lowercased query, for the verbatim-match bonus.
 
     Returns:
-        Integer relevance score (0 means no match).
+        Relevance score (0 means no match).
     """
+    fields = {
+        # id is folded into name: it is the slug of the name, so an agent that
+        # half-remembers an id still matches.
+        "name": f'{skill.get("name", "")} {skill.get("id", "")}',
+        "keywords": " ".join(skill.get("keywords", [])),
+        "category": skill.get("category", ""),
+        "description": skill.get("description", ""),
+    }
+
     score = 0
-
-    # Check name
-    name = skill.get("name", "").lower()
-    if query_lower in name:
-        score += 1
-
-    # Check description
-    description = skill.get("description", "").lower()
-    if query_lower in description:
-        score += 1
-
-    # Check keywords
-    keywords = skill.get("keywords", [])
-    for kw in keywords:
-        if query_lower in kw.lower():
-            score += 1
-            break  # Only count keywords field once
-
-    # Check category
-    category = skill.get("category", "").lower()
-    if query_lower in category:
-        score += 1
+    for field, weight in _FIELD_WEIGHTS.items():
+        text = fields[field]
+        if not text:
+            continue
+        score += weight * len(query_tokens & set(tokenize(text)))
+        if phrase in text.lower():
+            score += weight
 
     return score

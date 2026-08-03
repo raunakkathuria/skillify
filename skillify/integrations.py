@@ -2,8 +2,13 @@
 
 Generates configuration files that teach AI assistants to use the skillify index
 for on-demand skill discovery.
+
+The templates below are the weaker integration: they ask the agent to read a file
+and trust that it does. `install_mcp_server` is the stronger one — it registers
+skillify as an MCP server, so discovery becomes a tool call in the agent loop.
 """
 
+import json
 import os
 from pathlib import Path
 
@@ -174,6 +179,44 @@ def install_integration(
             f.write(content.lstrip("\n"))
 
     return file_path
+
+
+def install_mcp_server(root: str, project_dir: str = ".", server_name: str = "skillify") -> str:
+    """Register skillify as an MCP server in the project's .mcp.json.
+
+    Merges into any existing config rather than overwriting it.
+
+    Args:
+        root: Skills directory the server should scan.
+        project_dir: Project root containing (or to contain) .mcp.json.
+        server_name: Key to register under.
+
+    Returns:
+        The path of the written file.
+    """
+    os.makedirs(project_dir, exist_ok=True)
+    config_path = os.path.join(project_dir, ".mcp.json")
+
+    config = {}
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            # Refuse to clobber a file we cannot parse.
+            raise ValueError(f"{config_path} exists but is not valid JSON — fix or move it first")
+
+    servers = config.setdefault("mcpServers", {})
+    servers[server_name] = {
+        "command": "skillify",
+        "args": ["mcp", os.path.abspath(root)],
+    }
+
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+    return config_path
 
 
 def uninstall_integration(platform: str, project_dir: str = ".") -> bool:

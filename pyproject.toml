@@ -10,9 +10,17 @@ dependencies = [
     "rich",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest"]
+
 [project.scripts]
 skillify = "skillify.cli:cli"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+# tests/ on sys.path so tests can import the conftest helpers directly.
+pythonpath = ["tests"]
+testpaths = ["tests"]
