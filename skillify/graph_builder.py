@@ -12,8 +12,8 @@ from itertools import combinations
 from typing import Any
 
 
-def build_graph(skills: list[dict], output_dir: str) -> dict:
-    """Build a relationship graph from skill metadata and write it to disk.
+def build_graph(skills: list[dict]) -> dict:
+    """Build a relationship graph from skill metadata.
 
     Creates a graph where:
     - Nodes represent individual skills
@@ -23,39 +23,48 @@ def build_graph(skills: list[dict], output_dir: str) -> dict:
     - 'category': Skills in the same category (weight: 1)
     - 'keyword': Skills sharing 2+ keywords (weight: number of shared keywords)
 
+    Pure — call `write_graph` to persist the result. Tiering needs the graph
+    without the side effect.
+
     Args:
         skills: List of skill metadata dicts. Each should contain at minimum:
             id, name, description, keywords, category, path.
-        output_dir: Directory path where graph.json will be written.
 
     Returns:
         The complete graph dict with nodes, edges, and metadata.
     """
-    os.makedirs(output_dir, exist_ok=True)
-
     nodes = _build_nodes(skills)
     edges = _build_edges(skills)
 
     categories = sorted(set(skill.get("category", "uncategorized") for skill in skills))
-    now = datetime.now(timezone.utc).isoformat()
 
-    graph = {
+    return {
         "nodes": nodes,
         "edges": edges,
         "metadata": {
             "total_nodes": len(nodes),
             "total_edges": len(edges),
             "categories": categories,
-            "generated": now,
+            "generated": datetime.now(timezone.utc).isoformat(),
         },
     }
 
-    # Write graph.json
+
+def write_graph(graph: dict, output_dir: str) -> str:
+    """Write a graph dict to graph.json.
+
+    Args:
+        graph: Graph dict from `build_graph`.
+        output_dir: Directory to write into. Created if missing.
+
+    Returns:
+        The path written.
+    """
+    os.makedirs(output_dir, exist_ok=True)
     graph_path = os.path.join(output_dir, "graph.json")
     with open(graph_path, "w", encoding="utf-8") as f:
         json.dump(graph, f, indent=2, ensure_ascii=False)
-
-    return graph
+    return graph_path
 
 
 def _build_nodes(skills: list[dict]) -> list[dict]:
